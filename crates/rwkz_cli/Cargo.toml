@@ -1,0 +1,14 @@
+[package]
+name = "rwkz_cli"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "rwkz"
+path = "src/main.rs"
+
+[dependencies]
+rwkz_core = { path = "../rwkz_core" }
+clap = { workspace = true }
+anyhow = { workspace = true }
+hf-hub = "0.4"

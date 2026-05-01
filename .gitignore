@@ -1,0 +1,45 @@
+# Build output
+/target
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Python virtual environment
+.venv/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+*.rkz
+!tests/fixtures/*.rkz
+
+# Restored text from tests
+*_restored.txt
+
+# Local caches
+/.cargo
+
+# Model files and tokenizer (auto-downloaded from HuggingFace)
+/models/*.gguf
+/models/*.safetensors
+/models/rwkv_vocab_v20230424.json
+
+# Test fixtures (runtime artifacts)
+/alice29.txt
+
+# Quantization workspace (calibration data + imatrix — uploaded to HF, not tracked here)
+/models/.calibration/
+/models/.imatrix/
+
+# Temporary files
+/tmp
+
+# Claude Code internal state
+.claude/scheduled_tasks.lock
+.claude/.nfs*

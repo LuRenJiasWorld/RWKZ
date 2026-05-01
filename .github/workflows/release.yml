@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.v }}
+    steps:
+      - name: Parse tag
+        id: v
+        run: echo "v=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest,     target: x86_64-unknown-linux-gnu }
+          - { os: ubuntu-24.04-arm,  target: aarch64-unknown-linux-gnu }
+          - { os: windows-latest,    target: x86_64-pc-windows-msvc, ext: .exe }
+          - { os: windows-latest,    target: aarch64-pc-windows-msvc, ext: .exe }
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev
+      - run: cargo build --release -p rwkz_cli
+      - run: |
+          ext=""
+          if [ -n "${{ matrix.ext }}" ]; then ext="${{ matrix.ext }}"; fi
+          mv "target/release/rwkz${ext}" "rwkz-v${{ needs.version.outputs.version }}-${{ matrix.target }}${ext}"
+        shell: bash
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rwkz-${{ matrix.target }}
+          path: rwkz-v${{ needs.version.outputs.version }}-${{ matrix.target }}${{ matrix.ext }}
+
+  macos:
+    needs: version
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target:
+          - aarch64-apple-darwin
+          - x86_64-apple-darwin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust target
+        run: rustup target add ${{ matrix.target }}
+      - run: cargo build --release -p rwkz_cli --target ${{ matrix.target }}
+      - run: mv target/${{ matrix.target }}/release/rwkz rwkz-v${{ needs.version.outputs.version }}-${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rwkz-${{ matrix.target }}
+          path: rwkz-v${{ needs.version.outputs.version }}-${{ matrix.target }}
+
+  release:
+    needs: [version, build, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - run: ls -lh artifacts/
+      - uses: ncipollo/release-action@v1
+        with:
+          tag: v${{ needs.version.outputs.version }}
+          name: v${{ needs.version.outputs.version }}
+          artifacts: "artifacts/*"
+          artifactErrorsFailBuild: true
+          allowUpdates: true
+          generateReleaseNotes: true
